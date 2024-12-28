@@ -47,8 +47,8 @@ class Item:
         partial_stacks = []
         for source in self.sources:
             if source.account in material_storage_size.keys():
-                if source.count < 250 or (
-                        source.place == '$storage' and source.count < material_storage_size[source.account]):
+                if source.count != 0 and (source.count < 250 or (
+                        source.place == '$storage' and source.count < material_storage_size[source.account])):
                     partial_stacks.append(source)
         return partial_stacks
 

@@ -68,13 +68,16 @@ class ApiKeysManagerUi:
             return
 
         for item in self.ui_model.api_keys.items:
-            with ui.row().classes('items-center'):
+            with ui.grid(columns='auto 2fr auto auto auto auto'):
                 with ui.checkbox().bind_value(item, 'selected'):
                     ui.tooltip(
                         'When getting advice, only selected accounts are searched. Multiple accounts selected can be fairly slow and will produce lots of junk results from trying to merge multiple material storages.').classes(
                         'bg-green')
-                unique_label_ui(item.account)
                 ui.label(item.api_key).classes('font-medium')
+                with ui.button(icon='content_copy').props('flat fab-mini color=grey').on('click',
+                                                                      js_handler=f'() => navigator.clipboard.writeText("{item.api_key}")'):
+                    ui.tooltip('Copy API key to clipboard.').classes('bg-green')
+                unique_label_ui(item.account)
                 with ui.button(on_click=lambda: self.validate_gw2_api(item), icon='how_to_reg').props(
                         'flat fab-mini color=grey'):
                     ui.tooltip('Will validate API key with Arenanet servers.').classes('bg-green')
