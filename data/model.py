@@ -51,6 +51,7 @@ class Model(Listener):
         for api in self.apis:
             api.abort()
         self.aborted = True
+        self.is_ready = True
         self.items = dict()
 
     def add_item(self, item_id: str, account_bound: bool, source: Source) -> None:

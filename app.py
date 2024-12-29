@@ -36,21 +36,21 @@ async def start_advice(arg: ClickEventArguments) -> None:
             ui_model.busy_spinner.set_visibility(True)
             ui_model.model = None
             ui_model.clear_ui()
-            api_keys = []
+
             if len(ui_model.api_keys.items) == 0:
                 ui.notify("No api keys in list, add at least one.", type='negative')
+            elif ui_model.api_keys.selected_count == 0:
+                ui.notify("No api keys selected in list.", type='negative')
             else:
+                api_keys = []
                 for item in ui_model.api_keys.items:
                     if item.selected:
                         api_keys.append(GW2Api(item.api_key))
-                if len(api_keys) == 0:
-                    ui.notify("No api keys selected in list.", type='negative')
-                else:
-                    ui_model.model = Model(api_keys, ui_model.model_messaging)
-                    ui.notify("Starting to load account data.", type='positive')
-                    ui_model.abort_button.set_visibility(True)
-                    await run.io_bound(ui_model.model.init_from_api)
-                    ui.notify("Account data loaded.", type='positive')
+                ui_model.model = Model(api_keys, ui_model.model_messaging)
+                ui.notify("Starting to load account data.", type='positive')
+                ui_model.abort_button.set_visibility(True)
+                await run.io_bound(ui_model.model.init_from_api)
+                ui.notify("Account data loaded.", type='positive')
         except InvalidAccessToken:
             ui.notify("API key is invalid!", type='negative')
         except MissingPermission as mp:
@@ -73,23 +73,32 @@ def notify_from_queue(queue: Queue) -> None:
 def index() -> None:
     ui.page_title('GW2 inventory cleanup tool')
 
+    ui.add_head_html(
+        '<link type="text/css" rel="stylesheet" href="https://d1h9a8s8eodvjz.cloudfront.net/fonts/menomonia/08-02-12/menomonia.css" />')
+    ui.add_css('* { font-family: Menomonia; }')
+
     ui.timer(0.1, callback=lambda: notify_from_queue(ui_model.queue))
 
-    ui.label('GW2 inventory cleanup tool').classes('text-xl font-medium')
+    with ui.header(elevated=True):
+        with ui.row():
+            ui.label('GW2 inventory cleanup tool').classes('text-xl font-medium')
+            ui_model.start_button = ui.button("Advise me", icon='directions_run').props('color=green-5').classes(
+                'shadow-lg').on_click(start_advice)
+            ui_model.start_button.bind_enabled_from(ui_model.api_keys, 'is_ready')
+            ui_model.start_button.bind_enabled_from(ui_model, 'is_ready')
+            with ui_model.start_button:
+                ui.tooltip(
+                    'Load account info from API and populate advice. You need at least one API key in list.').classes(
+                    'bg-green')
+            ui_model.busy_spinner = ui.spinner('dots', size='lg', color='red')
+            ui_model.busy_spinner.set_visibility(False)
+            ui_model.abort_button = ui.button("Stop", icon='cancel').props('color=red-5').classes('shadow-lg').on_click(
+                ui_model.abort)
+            ui_model.abort_button.set_visibility(False)
+            with ui_model.abort_button:
+                ui.tooltip('Stop loading account info from API.').classes('bg-green')
 
     ApiKeysManagerUi(ui_model)
-
-    with ui.row():
-        ui_model.start_button = ui.button("Advise me", icon='directions_run').on_click(start_advice)
-        ui_model.start_button.bind_enabled_from(ui_model.api_keys, 'is_ready')
-        with ui_model.start_button:
-            ui.tooltip('Load account info from API and populate advice. You need at least one API key in list.').classes('bg-green')
-        ui_model.busy_spinner = ui.spinner('dots', size='lg', color='red')
-        ui_model.busy_spinner.set_visibility(False)
-        ui_model.abort_button = ui.button("Stop", icon='cancel').on_click(ui_model.abort)
-        ui_model.abort_button.set_visibility(False)
-        with ui_model.abort_button:
-            ui.tooltip('Stop loading account info from API.').classes('bg-green')
 
     AdviceStacksUi(ui_model)
     AdviceGobbleUi(ui_model)
@@ -100,12 +109,15 @@ def index() -> None:
     AdviceJustDeleteUi(ui_model)
     AdviceMiscUi(ui_model)
 
-    with ui.row():
-        ui.label(f'Version {version.app_version}').classes('text-xs')
-        ui.label('Contact me ingame at zwei.9073.').classes('text-xs')
-        ui.label('Tips are welcome as well as questions').classes('text-xs')
-        ui.icon('currency_bitcoin').classes('text-sm')
-        ui.link('bc1qpr3ptpdjglaf9t5uhyd2cyhm7a9u4gq4l50xdu', target='bitcoin:bc1qpr3ptpdjglaf9t5uhyd2cyhm7a9u4gq4l50xdu').classes('text-xs')
+    with ui.footer():
+        with ui.row():
+            ui.label(f'Version {version.app_version}').classes('text-xs')
+            ui.label('Contact me ingame at zwei.9073.').classes('text-xs')
+            ui.label('Tips are welcome as well as questions').classes('text-xs')
+            ui.icon('currency_bitcoin').classes('text-sm')
+            ui.link('bc1qpr3ptpdjglaf9t5uhyd2cyhm7a9u4gq4l50xdu',
+                    target='bitcoin:bc1qpr3ptpdjglaf9t5uhyd2cyhm7a9u4gq4l50xdu').classes('text-xs')
+
 
 if __name__ in {"__main__", "__mp_main__"}:
     ui_model = UiModel()

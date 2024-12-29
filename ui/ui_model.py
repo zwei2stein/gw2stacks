@@ -38,13 +38,13 @@ class ApiKeyList:
         return False
 
     @property
+    def selected_count(self):
+        return len([item for item in self.items if item.selected])
+
+    @property
     def is_ready(self):
-        if len(self.items) == 0:
-            return False
-        for item in self.items:
-            if item.selected:
-                return True
-        return False
+        return self.selected_count > 0
+    
 
 class UiModel(Listener):
 
@@ -64,6 +64,12 @@ class UiModel(Listener):
 
     def clear_ui(self):
         self.model_messaging.clear_ui()
+
+    @property
+    def is_ready(self):
+        if not self.model:
+            return True
+        return self.model.is_ready
 
     def save(self) -> None:
         keys_list = []

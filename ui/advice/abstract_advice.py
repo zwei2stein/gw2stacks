@@ -42,9 +42,9 @@ class Advice(Listener):
         advices: list[ItemForDisplay] = self.get_data()
 
         with ui.expansion(f'{self.name} ({len(advices)})', icon=self.icon, value=len(advices) > 0).classes('w-full'):
-            with ui.grid(columns='auto 2fr 2fr'):
+            with ui.grid(columns='auto 2fr auto').classes('w-full'):
                 for item in advices:
-                    ui.image(item.item.icon).classes('w-16 h-16')
+                    ui.image(item.item.icon).classes('w-16 h-16 shadow-lg')
                     with ui.column():
                         item_name_label_ui(item.item)
                         if item.advice:

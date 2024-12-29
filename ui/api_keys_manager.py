@@ -12,11 +12,13 @@ class ApiKeysManagerUi:
 
     def __init__(self, ui_model: UiModel):
         self.ui_model = ui_model
-        self.ui()
+        self.api_keys_ui()
         ui_model.api_keys.on_change = self.refresh
         self.key_pattern = re.compile(
             r"^[A-F\d]{8}-[A-F\d]{4}-[A-F\d]{4}-[A-F\d]{4}-[A-F\d]{20}-[A-F\d]{4}-[A-F\d]{4}-[A-F\d]{4}-[A-F\d]{12}$",
             re.IGNORECASE)
+
+        self.expanded = not self.ui_model.api_keys.selected_count > 0
 
     def refresh(self):
         self.api_keys_ui.refresh()
@@ -52,48 +54,61 @@ class ApiKeysManagerUi:
             self.ui_model.api_keys.add(validated_item.api_key, validated_item.valid, validated_item.account)
             self.ui_model.save()
             api_key.value = ''
+            ui.notify(f'Added API key for {validated_item.account} account.', type='positive')
         else:
             ui.notify("Not valid, will not add", type='negative')
 
     def remove_key(self, item: ApiKeyItem):
         self.ui_model.api_keys.remove(item)
         self.ui_model.save()
+        ui.notify(f'Deleted API key for {item.account} account.', type='info')
+
+    def toggle_key(self):
+        self.ui_model.save()
+        self.api_keys_ui.refresh()
 
     @ui.refreshable
     def api_keys_ui(self):
 
-        if len(self.ui_model.api_keys.items) == 0:
-            with ui.row():
-                ui.label('No API keys in list, add at least one').classes('mx-auto')
-            return
+        with ui.expansion(f"API keys (selected {self.ui_model.api_keys.selected_count}/{len(self.ui_model.api_keys.items)})",
+                          icon='key').classes('w-full').bind_value(self, 'expanded'):
 
-        for item in self.ui_model.api_keys.items:
-            with ui.grid(columns='auto 2fr auto auto auto auto'):
-                with ui.checkbox().bind_value(item, 'selected'):
+            with ui.grid(columns='auto auto'):
+                key_input = ui.input('New GW2 API key',
+                                     validation=lambda value: self.validate_gw2_api_offline(value)).style('width: 78ch')
+                with ui.button(on_click=lambda: self.add_key(key_input), icon='person_add').props(
+                        'flat fab-mini color=grey').bind_enabled_from(key_input, 'error', lambda error: error is None):
                     ui.tooltip(
-                        'When getting advice, only selected accounts are searched. Multiple accounts selected can be fairly slow and will produce lots of junk results from trying to merge multiple material storages.').classes(
+                        'Will validate API key with Arenanet servers and if okay, will add it to list and save list.').classes(
                         'bg-green')
-                ui.label(item.api_key).classes('font-medium')
-                with ui.button(icon='content_copy').props('flat fab-mini color=grey').on('click',
-                                                                      js_handler=f'() => navigator.clipboard.writeText("{item.api_key}")'):
-                    ui.tooltip('Copy API key to clipboard.').classes('bg-green')
-                unique_label_ui(item.account)
-                with ui.button(on_click=lambda: self.validate_gw2_api(item), icon='how_to_reg').props(
-                        'flat fab-mini color=grey'):
-                    ui.tooltip('Will validate API key with Arenanet servers.').classes('bg-green')
-                with ui.button(on_click=lambda: self.remove_key(item), icon='delete').props(
-                        'flat fab-mini color=grey'):
-                    ui.tooltip('Remove key from list and save list.').classes('bg-green')
 
-    def ui(self):
+            if len(self.ui_model.api_keys.items) == 0:
+                with ui.row():
+                    ui.label('No API keys in list, add at least one').classes('mx-auto')
+                return
 
-        self.api_keys_ui()
+            for item in self.ui_model.api_keys.items:
+                with ui.grid(columns='auto 2fr auto auto').classes('w-full'):
+                    with ui.switch().bind_value(item, 'selected').on_value_change(self.toggle_key):
+                        ui.tooltip(
+                            'When getting advice, only selected accounts are searched. Multiple accounts selected can be fairly slow and will produce lots of junk results from trying to merge multiple material storages.').classes(
+                            'bg-green')
 
-        with ui.grid(columns='auto auto'):
-            key_input = ui.input('New GW2 API key',
-                                 validation=lambda value: self.validate_gw2_api_offline(value)).style('width: 78ch')
-            with ui.button(on_click=lambda: self.add_key(key_input), icon='person_add').props(
-                    'flat fab-mini color=grey').bind_enabled_from(key_input, 'error', lambda error: error is None):
-                ui.tooltip(
-                    'Will validate API key with Arenanet servers and if okay, will add it to list and save list.').classes(
-                    'bg-green')
+                    ui.label(item.api_key).classes('font-medium')
+
+                    unique_label_ui(item.account)
+
+                    with ui.button(icon='menu').props('flat fab-mini color=grey').classes('shadow-lg'):
+                        with ui.menu():
+                            with ui.menu_item().on('click',
+                                                   js_handler=f'() => navigator.clipboard.writeText("{item.api_key}")'):
+                                ui.icon('content_copy', color='grey').classes('size-10')
+                                ui.tooltip('Copy API key to clipboard.').classes('bg-green')
+                            with ui.menu_item(on_click=lambda: self.validate_gw2_api(item)):
+                                ui.icon('how_to_reg', color='green').classes('size-10')
+                                ui.tooltip('Will validate API key with Arenanet servers.').classes('bg-green')
+                            with ui.menu_item(on_click=lambda: self.remove_key(item)):
+                                ui.icon('delete', color='red').classes('size-10')
+                                ui.tooltip('Remove key from list and save list.').classes('bg-green')
+
+        ui.separator()
