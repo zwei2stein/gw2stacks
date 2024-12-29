@@ -6,6 +6,12 @@ It will try to find stack of items that can be merged. Also, items that can be d
 
 At least one item slot guaranteed! Just delete random item! Or don't.
 
+## Some screenshots
+
+![How it looks](docs/example.png)
+
+![Multiple accounts](docs/multi_account.png)
+
 ## How to use it
 
 1. Run this app
