@@ -17,5 +17,6 @@ item_rarity_colors = {
 def item_name_label_ui(item: Item) -> None:
     color = item_rarity_colors.get(item.rarity, '#000000')
 
-    ui.label(item.name).style(
+    ui.link(item.name,item.wiki,new_tab=True).style(
         f'color: {color}; font-weight: bold')
+
