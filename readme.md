@@ -33,9 +33,13 @@ instructions.
 
 ### Install required libraries
 
+First, create new environment with `python -m venv .venv` and activate it with `.venv\Scripts\activate.bat`. You can skip this step, but it is *not* recommended.
+
 Run `pip3 install -r requirements.txt` command in commandline, you should be in directory where this file is.
 
 ### Run app
+
+If you have venv, and it is not active, activate it with `.venv\Scripts\activate.bat`.
 
 Run `python app.py` command, you should be in directory where this file is. Browser should open with page of this app.
 
