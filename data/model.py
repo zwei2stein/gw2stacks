@@ -118,7 +118,9 @@ class Model(Listener):
             item.name = item_info['name']
             item.icon = item_info['icon']
             item.rarity = item_info['rarity']
-            item.wiki = f'https://wiki.guildwars2.com/wiki/{item_info['name'].replace(" ", "_")}'
+
+            item.wiki_link = f'https://wiki.guildwars2.com/wiki/{item_info['name'].replace(" ", "_")}'
+
             if item_info['type'] not in ['Armor', 'Back', 'Gathering', 'Tool', 'Trinket', 'Weapon', 'Bag', 'Container',
                                          'Gizmo']:
                 item.stackable = True
@@ -144,7 +146,7 @@ class Model(Listener):
     def build_ecto_price(self, api: GW2Api) -> None:
 
         self.messaging.broadcast("Loading ecto price")
-        price = api.item_price(19721)
+        price = api.item_price('19721')
 
         salvage_price = 0.10496
         ecto_chance = 0.875
@@ -171,10 +173,12 @@ class Model(Listener):
     def get_rare_salvage_advice(self) -> list[ItemForDisplay]:
         rare_salvage_advice = []
         for item in filter(lambda list_item: list_item.rare_for_salvage, self.items.values()):
-            if item.price > self.ecto_salvage_price:
-                rare_salvage_advice.append(ItemForDisplay(item, advice='Salvage!'))
-            else:
-                rare_salvage_advice.append(ItemForDisplay(item, advice='Sell!'))
+            if not item.price is None:
+                if item.price > self.ecto_salvage_price:
+                    rare_salvage_advice.append(ItemForDisplay(item, advice='Salvage!'))
+                else:
+                    if not item.account_bound:
+                        rare_salvage_advice.append(ItemForDisplay(item, advice='Sell!'))
         return rare_salvage_advice
 
     @lru_cache(maxsize=None)
