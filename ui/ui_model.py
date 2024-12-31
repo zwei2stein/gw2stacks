@@ -44,7 +44,7 @@ class ApiKeyList:
     @property
     def is_ready(self):
         return self.selected_count > 0
-    
+
 
 class UiModel(Listener):
 
@@ -81,14 +81,21 @@ class UiModel(Listener):
             keys_list.append(json_item)
         json_data = dict()
         json_data['api_keys'] = keys_list
-        with open(SAVED_MODEL_FILE, 'w') as out_file:
-            file_data = json.dumps(json_data, sort_keys=True, indent=4, ensure_ascii=False)
-            out_file.write(file_data)
+        try:
+            with open(SAVED_MODEL_FILE, 'w') as out_file:
+                file_data = json.dumps(json_data, sort_keys=True, indent=4, ensure_ascii=False)
+                out_file.write(file_data)
+        except Exception as ex:
+            self.model_messaging.broadcast(
+                f'Key was added, but configuration file {SAVED_MODEL_FILE} was not saved, error: ({ex})')
 
     def restore(self) -> None:
         if os.path.isfile(SAVED_MODEL_FILE):
-            with open(SAVED_MODEL_FILE, 'r') as in_file:
-                json_data = json.load(in_file)
-                keys_list = json_data['api_keys']
-                for key in keys_list:
-                    self.api_keys.add(key['api_key'], key['selected'], key['account'])
+            if os.access(SAVED_MODEL_FILE, os.R_OK):
+                with open(SAVED_MODEL_FILE, 'r') as in_file:
+                    json_data = json.load(in_file)
+                    keys_list = json_data['api_keys']
+                    for key in keys_list:
+                        self.api_keys.add(key['api_key'], key['selected'], key['account'])
+            else:
+                self.model_messaging.broadcast(f'Can not read configuration from {SAVED_MODEL_FILE}, but all is well')
