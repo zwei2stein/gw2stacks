@@ -70,12 +70,14 @@ class ApiKeysManagerUi:
     @ui.refreshable
     def api_keys_ui(self):
 
-        with ui.expansion(f"API keys (selected {self.ui_model.api_keys.selected_count}/{len(self.ui_model.api_keys.items)})",
-                          icon='key').classes('w-full').bind_value(self, 'expanded'):
+        with ui.expansion(
+                f"API keys (selected {self.ui_model.api_keys.selected_count}/{len(self.ui_model.api_keys.items)})",
+                icon='key').classes('w-full').bind_value(self, 'expanded'):
 
             with ui.grid(columns='auto auto'):
                 key_input = ui.input('New GW2 API key',
-                                     validation=lambda value: self.validate_gw2_api_offline(value)).style('width: 78ch')
+                                     validation=lambda value: self.validate_gw2_api_offline(value)).style(
+                    'width: 78ch').props('maxlength=72')
                 with ui.button(on_click=lambda: self.add_key(key_input), icon='person_add').props(
                         'flat fab-mini color=grey').bind_enabled_from(key_input, 'error', lambda error: error is None):
                     ui.tooltip(
