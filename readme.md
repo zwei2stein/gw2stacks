@@ -29,7 +29,7 @@ It is easy, just:
 ### Get Python interpreter.
 
 [Download](https://www.python.org/downloads/) latest version of Python from https://www.python.org and follow
-instructions.
+instructions. Python version 3.13 is required. 
 
 ### Install required libraries
 
@@ -47,6 +47,14 @@ Run `python app.py` command, you should be in directory where this file is. Brow
 ## Make exe package
 
 `nicegui-pack --copy-metadata --onefile --name "GW2 inventory cleanup tool" app.py`
+
+## Misc troubleshooting
+
+### Older python versions
+
+In python version older than 3.12, you will get this error `ImportError: cannot import name 'batched' from 'itertools' (unknown location)`
+
+To resolve this, either upgrade Python to latest version and recreate venv or upgrade existing venv with `python3.12 -m venv --upgrade .venv`
 
 ## Contact
 

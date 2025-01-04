@@ -119,7 +119,7 @@ class Model(Listener):
             item.icon = item_info['icon']
             item.rarity = item_info['rarity']
 
-            item.wiki_link = f'https://wiki.guildwars2.com/wiki/{item_info['name'].replace(" ", "_")}'
+            item.wiki_link = f"https://wiki.guildwars2.com/wiki/{item_info['name'].replace(' ', '_')}"
 
             if item_info['type'] not in ['Armor', 'Back', 'Gathering', 'Tool', 'Trinket', 'Weapon', 'Bag', 'Container',
                                          'Gizmo']:
