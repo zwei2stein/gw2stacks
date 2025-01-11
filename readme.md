@@ -46,7 +46,7 @@ Run `python app.py` command, you should be in directory where this file is. Brow
 
 ## Make exe package
 
-`nicegui-pack --copy-metadata --onefile --name "GW2 inventory cleanup tool" app.py`
+`nicegui-pack --onefile --name "GW2 inventory cleanup tool" app.py`
 
 ## Misc troubleshooting
 
