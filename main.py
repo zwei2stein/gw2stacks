@@ -41,3 +41,5 @@ if __name__ == "__main__":
     nice_print_advice_list(model.get_play_to_consume_advice(), "Play")
     nice_print_advice_list(model.get_advice_just_delete(), "Delete")
     nice_print_advice_list(model.get_misc_advice(), "Misc")
+    nice_print_advice_list(model.get_karma_consumables_advice(), "Karma")
+    nice_print_advice_list(model.get_just_salvage_advice(), "Salvage")
