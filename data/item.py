@@ -12,6 +12,7 @@ class Item:
 
         self.account_bound = False
         self.name = None
+        self.description = None
         self.icon = None
         self.rarity = None
         self.stackable = False

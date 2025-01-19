@@ -159,7 +159,7 @@ class GW2Api(Listener):
     @check_abort
     @lru_cache(maxsize=None)
     @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
-    def item_price(self, item_id: str):
+    def item_price(self, item_id: int):
         r = self.s.get('https://api.guildwars2.com/v2/commerce/prices/' + str(item_id))
         self.verify_response(r)
         return r.json()

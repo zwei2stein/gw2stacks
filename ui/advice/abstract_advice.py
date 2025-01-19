@@ -2,6 +2,7 @@ from nicegui import ui
 
 from data.item import ItemForDisplay
 from messaging.messaging import Listener
+from ui.item_icon_ui import item_icon_ui
 from ui.item_name_label import item_name_label_ui
 from ui.sources_table_ui import sources_table_ui
 from ui.ui_model import UiModel
@@ -23,7 +24,7 @@ class Advice(Listener):
     def config(self) -> None:
         ...
 
-    def get_data(self) -> list:
+    def get_data(self) -> list[ItemForDisplay]:
         ...
 
     def refresh_ui(self) -> None:
@@ -41,10 +42,11 @@ class Advice(Listener):
 
         advices: list[ItemForDisplay] = self.get_data()
 
-        with ui.expansion(f'{self.name} ({len(advices)})', icon=self.icon, value=len(advices) > 0).classes('w-full'):
+        with (((
+        ((ui.expansion(f'{self.name} ({len(advices)})', icon=self.icon, value=len(advices) > 0).classes('w-full')))))):
             with ui.grid(columns='auto 2fr auto').classes('w-full'):
                 for item in advices:
-                    ui.image(item.item.icon).classes('w-16 h-16 shadow-lg')
+                    item_icon_ui(item)
                     with ui.column():
                         item_name_label_ui(item.item)
                         if item.advice:

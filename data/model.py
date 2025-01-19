@@ -15,7 +15,7 @@ class Model(Listener):
         self.aborted = False
         self.is_ready = False
 
-        self.items = dict()
+        self.items: dict[int, Item] = dict()
         self.empty_slots = 0
         self.ecto_salvage_price = None
         self.material_storage_size = dict()
@@ -54,9 +54,9 @@ class Model(Listener):
         self.is_ready = True
         self.items = dict()
 
-    def add_item(self, item_id: str, account_bound: bool, source: Source) -> None:
+    def add_item(self, item_id: int, account_bound: bool, source: Source) -> None:
         if item_id not in self.items:
-            self.items[item_id] = Item(int(item_id))
+            self.items[item_id] = Item(item_id)
         self.items[item_id].add(source)
         self.items[item_id].account_bound = account_bound
 
@@ -113,11 +113,21 @@ class Model(Listener):
         appraise_item_ids = []
         self.messaging.broadcast("Loading item details")
         for item_info in api.item_info(frozenset(self.items.keys())):
-            item = self.items.get(item_info['id'])
+            item: Item = self.items.get(item_info['id'])
 
             item.name = item_info['name']
             item.icon = item_info['icon']
             item.rarity = item_info['rarity']
+            item.description = item_info.get('description', None)
+
+            details = item_info.get('details', None)
+            if details:
+                detail_description = details.get('description', None)
+                if detail_description:
+                    if not item.description:
+                        item.description = detail_description
+                    else:
+                        item.description = item.description + '\n\n' + detail_description
 
             item.wiki_link = f"https://wiki.guildwars2.com/wiki/{item_info['name'].replace(' ', '_')}"
 
@@ -146,7 +156,7 @@ class Model(Listener):
     def build_ecto_price(self, api: GW2Api) -> None:
 
         self.messaging.broadcast("Loading ecto price")
-        price = api.item_price('19721')
+        price = api.item_price(19721)
 
         salvage_price = 0.10496
         ecto_chance = 0.875
@@ -205,6 +215,18 @@ class Model(Listener):
         return just_delete_advice
 
     @lru_cache(maxsize=None)
+    def get_just_salvage_advice(self) -> list[ItemForDisplay]:
+        just_salvage_advice = []
+
+        exclude = [19721]  # ecto
+
+        for item in filter(
+                lambda list_item: list_item.description == "Salvage Item" and list_item.item_id not in exclude,
+                self.items.values()):
+            just_salvage_advice.append(ItemForDisplay(item, advice="Salvage this item"))
+        return just_salvage_advice
+
+    @lru_cache(maxsize=None)
     def get_play_to_consume_advice(self) -> list[ItemForDisplay]:
 
         gameplay_consumables = {
@@ -215,7 +237,6 @@ class Model(Listener):
             67979: "Open a greater nightmare pod in the Silverwastes after completing meta.",
             67818: "Use during breach event in Silverwastes.",
             67780: "Open Tarnished chest in Silverwastes.",
-            93407: "Use in the Drizzlewood Coast to spawn chests. Make sure you have required keys.",
             87517: "Open krait Sunken Chests to progress a Master Diver achievement.",
             48716: "Open chests in the Aetherpath of the Twilight Arbor dungeon.",
 
@@ -232,7 +253,17 @@ class Model(Listener):
 
             71627: "Complete events in the Verdant Brink.",
             75024: "Complete events in the Auric Basin.",
-            71207: "Complete events in the Tangled Depths."
+            71207: "Complete events in the Tangled Depths.",
+
+            87630: "Contribute Spare Parts to kick off meta event in the Domain of Kourna.",
+
+            93407: "Use in the Drizzlewood Coast to spawn chests. Make sure you have required keys.",
+
+            93371: "Use to unlock achievements (and play in Drizzlewood Coast)",
+            93817: "Use to unlock achievements (and play  Drizzlewood Coast), or just delete/tp when you are done.",
+            93842: "Use to unlock achievements (and play  Drizzlewood Coast), or just delete/tp when you are done.",
+            93799: "Use to unlock achievements (and play  Drizzlewood Coast), or just delete/tp when you are done.",
+
         }
 
         play_to_consume_advices = []
@@ -273,7 +304,11 @@ class Model(Listener):
         misc = [
             MiscAdvice(43773, 25, "Transform Quartz Crystals into a Charged Quartz Crystal at a place of power."),
             MiscAdvice(66608, 100, "Sift throught silky sand."),
-            MiscAdvice(48717, 4, "Craft 'Completed Aetherkey'.")
+            MiscAdvice(48717, 4, "Craft 'Completed Aetherkey'."),
+            MiscAdvice(93472, 1, "Consume to get War Supplies"),
+            MiscAdvice(93649, 1, "Consume to get War Supplies"),
+            MiscAdvice(93455, 1, "Consume to get War Supplies"),
+            MiscAdvice(68531, 1, "Consume to get Mordrem parts"),
         ]
 
         misc_advices = []
@@ -281,5 +316,18 @@ class Model(Listener):
         for advice in misc:
             if self.has_item(advice.item_id) and self.items[advice.item_id].total_count() >= advice.min_size:
                 misc_advices.append(ItemForDisplay(self.items[advice.item_id], advice=advice.text))
+
+        return misc_advices
+
+    def get_karma_consumables_advice(self) -> list[ItemForDisplay]:
+
+        karma_item_ids = [86336, 85790, 41740, 38030, 86374, 86181, 36448, 36449, 92714, 95765, 36450, 36451, 41738,
+                          36456, 77652, 36457, 36458, 36459, 36460, 70244, 69939, 39127, 41373, 36461]
+
+        misc_advices = []
+
+        for item_id in karma_item_ids:
+            if self.has_item(item_id) and self.items[item_id].total_count() > 0:
+                misc_advices.append(ItemForDisplay(self.items[item_id], advice="Consume to get karma."))
 
         return misc_advices

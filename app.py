@@ -11,6 +11,8 @@ from messaging.ui_notify_listener import QueueListener
 from reader.gw2api import GW2Api, InvalidAccessToken, MissingPermission, UserAborted
 from ui.advice.advice_gobble_ui import AdviceGobbleUi
 from ui.advice.advice_just_delete_ui import AdviceJustDeleteUi
+from ui.advice.advice_just_salvage_ui import AdviceJustSalvageUi
+from ui.advice.advice_karma_consumables_ui import AdviceKarmaConsumablesUi
 from ui.advice.advice_luck_craft_ui import AdviceLuckCraftUi
 from ui.advice.advice_misc_ui import AdviceMiscUi
 from ui.advice.advice_play_to_consume_ui import AdvicePlayToConsumeUi
@@ -104,7 +106,9 @@ def index() -> None:
     AdviceGobbleUi(ui_model)
     AdviceVendorUi(ui_model)
     AdviceRareSalvageUi(ui_model)
+    AdviceJustSalvageUi(ui_model)
     AdviceLuckCraftUi(ui_model)
+    AdviceKarmaConsumablesUi(ui_model)
     AdvicePlayToConsumeUi(ui_model)
     AdviceJustDeleteUi(ui_model)
     AdviceMiscUi(ui_model)
