@@ -14,3 +14,4 @@ class AdviceLuckCraftUi(Advice):
     def config(self):
         self.icon = 'casino'
         self.name = 'Craft luck away'
+        self.description = 'Upgrade luck to higher tiers which take up less space or is more easily consumed.'

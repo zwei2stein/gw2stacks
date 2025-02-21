@@ -4,22 +4,28 @@ from itertools import batched
 import requests
 from retrying import retry
 
+from log_config import logger
 from messaging.messaging import Listener
 
 required_permissions = ['account', 'characters', 'inventories']
+
+api_uri_base = 'https://api.guildwars2.com'
 
 items_per_request = 200
 
 
 # define Python user-defined exceptions
 class InvalidAccessToken(Exception):
-    pass
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
 
 
 class MissingPermission(Exception):
 
-    def __init__(self, permission: str):
+    def __init__(self, permission: str, api_key: str):
         self.permission = permission
+        self.api_key = api_key
 
 
 class Timeout(Exception):
@@ -54,19 +60,19 @@ class GW2Api(Listener):
         self.validate()
 
     def validate(self) -> None:
-        r = self.s.get('https://api.guildwars2.com/v2/tokeninfo', params=self.get_auth_params())
+        r = self.s.get(f'{api_uri_base}/v2/tokeninfo', params=self.get_auth_params())
 
         data = r.json()
 
         if not r.status_code == 200:
-            raise InvalidAccessToken
+            raise InvalidAccessToken(self.api_key)
 
         if 'permissions' in data:
             for permission in required_permissions:
                 if permission not in data['permissions']:
-                    raise MissingPermission(permission)
+                    raise MissingPermission(permission, self.api_key)
         else:
-            raise InvalidAccessToken
+            raise InvalidAccessToken(self.api_key)
 
     def abort(self) -> None:
         self.aborted = True
@@ -74,6 +80,7 @@ class GW2Api(Listener):
     @staticmethod
     def verify_response(r) -> None:
         if r.status_code in (502, 504, 408):
+            logger.warning("Timeout calling api.")
             raise Timeout()
 
     def get_auth_params(self) -> list:
@@ -83,7 +90,7 @@ class GW2Api(Listener):
     @lru_cache(maxsize=None)
     @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
     def account_name(self) -> str:
-        r = self.s.get('https://api.guildwars2.com/v2/account', params=self.get_auth_params())
+        r = self.s.get(f'{api_uri_base}/v2/account', params=self.get_auth_params())
         self.verify_response(r)
         return r.json().get("name", "?")
 
@@ -91,7 +98,7 @@ class GW2Api(Listener):
     @lru_cache(maxsize=None)
     @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
     def material_storage(self):
-        r = self.s.get('https://api.guildwars2.com/v2/account/materials', params=self.get_auth_params())
+        r = self.s.get(f'{api_uri_base}/v2/account/materials', params=self.get_auth_params())
         self.verify_response(r)
         return r.json()
 
@@ -99,7 +106,7 @@ class GW2Api(Listener):
     @lru_cache(maxsize=None)
     @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
     def bank(self):
-        r = self.s.get('https://api.guildwars2.com/v2/account/bank', params=self.get_auth_params())
+        r = self.s.get(f'{api_uri_base}/v2/account/bank', params=self.get_auth_params())
         self.verify_response(r)
         return r.json()
 
@@ -107,7 +114,7 @@ class GW2Api(Listener):
     @lru_cache(maxsize=None)
     @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
     def shared_slots(self):
-        r = self.s.get('https://api.guildwars2.com/v2/account/inventory', params=self.get_auth_params())
+        r = self.s.get(f'{api_uri_base}/v2/account/inventory', params=self.get_auth_params())
         self.verify_response(r)
         return r.json()
 
@@ -115,7 +122,7 @@ class GW2Api(Listener):
     @lru_cache(maxsize=None)
     @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
     def characters(self):
-        r = self.s.get('https://api.guildwars2.com/v2/characters', params=self.get_auth_params())
+        r = self.s.get(f'{api_uri_base}/v2/characters', params=self.get_auth_params())
         self.verify_response(r)
         return r.json()
 
@@ -123,9 +130,8 @@ class GW2Api(Listener):
     @lru_cache(maxsize=None)
     @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
     def character_inventory(self, character_name: str):
-        r = self.s.get(
-            'https://api.guildwars2.com/v2/characters/' + requests.utils.quote(character_name) + '/inventory',
-            params=self.get_auth_params())
+        r = self.s.get(f'{api_uri_base}/v2/characters/{requests.utils.quote(character_name)}/inventory',
+                       params=self.get_auth_params())
         self.verify_response(r)
         return r.json()
 
@@ -137,7 +143,7 @@ class GW2Api(Listener):
         for item_ids_chunk in batched(item_ids, items_per_request):
             if self.aborted:
                 return None
-            r = self.s.get('https://api.guildwars2.com/v2/items', params=[('ids', ",".join(map(str, item_ids_chunk)))])
+            r = self.s.get(f'{api_uri_base}/v2/items', params=[('ids', ",".join(map(str, item_ids_chunk)))])
             self.verify_response(r)
             item_infos.extend(r.json())
         return item_infos
@@ -150,7 +156,7 @@ class GW2Api(Listener):
         for item_ids_chunk in batched(item_ids, items_per_request):
             if self.aborted:
                 return None
-            r = self.s.get('https://api.guildwars2.com/v2/commerce/prices',
+            r = self.s.get(f'{api_uri_base}/v2/commerce/prices',
                            params=[('ids', ",".join(map(str, item_ids_chunk)))])
             self.verify_response(r)
             item_prices.extend(r.json())
@@ -160,6 +166,23 @@ class GW2Api(Listener):
     @lru_cache(maxsize=None)
     @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
     def item_price(self, item_id: int):
-        r = self.s.get('https://api.guildwars2.com/v2/commerce/prices/' + str(item_id))
+        r = self.s.get(f'{api_uri_base}/v2/commerce/prices/{str(item_id)}')
         self.verify_response(r)
         return r.json()
+
+    @check_abort
+    @lru_cache(maxsize=None)
+    @retry(wait_fixed=200, stop_max_attempt_number=3, retry_on_exception=retry_if_timeout, wrap_exception=True)
+    def recipes(self):
+        r = self.s.get(f'{api_uri_base}/v2/recipes')
+        self.verify_response(r)
+        recipe_ids = r.json()
+        recipes = []
+        for recipe_ids_chunk in batched(recipe_ids, items_per_request):
+            if self.aborted:
+                return None
+            r = self.s.get(f'{api_uri_base}/v2/recipes',
+                           params=[('v', '2022-03-09T02:00:00.000Z'), ('ids', ",".join(map(str, recipe_ids_chunk)))])
+            self.verify_response(r)
+            recipes.extend(r.json())
+        return recipes

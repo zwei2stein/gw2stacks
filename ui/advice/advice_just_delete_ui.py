@@ -14,3 +14,4 @@ class AdviceJustDeleteUi(Advice):
     def config(self):
         self.icon = 'delete_sweep'
         self.name = 'Just delete these items'
+        self.description = 'Just takes up space and has no uses, typically items from older style collections.'

@@ -14,3 +14,4 @@ class AdviceKarmaConsumablesUi(Advice):
     def config(self):
         self.icon = 'change_history'
         self.name = 'Karma consumables'
+        self.description = 'Items that have no other use than being consumed for karma.'

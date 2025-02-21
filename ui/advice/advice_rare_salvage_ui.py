@@ -14,3 +14,4 @@ class AdviceRareSalvageUi(Advice):
     def config(self):
         self.icon = 'recycling'
         self.name = 'Rare salvage'
+        self.description = 'Is it worth it to salvage rare item for Ecto or is is more worth it to sell it on Trading post?'

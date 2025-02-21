@@ -24,6 +24,9 @@ class Model(Listener):
 
         self.accounts = []
 
+        self.recipes = []
+        self.recipe_results: dict[int, Item] = dict()
+
         self.apis = apis
 
     def init_from_api(self) -> None:
@@ -38,11 +41,15 @@ class Model(Listener):
         self.material_storage_size = dict()
         self.accounts = []
 
+        self.recipes = []
+        self.recipe_results: dict[int, Item] = dict()
+
         for api in self.apis:
             self.build_material_storage_size(api)
             self.build_inventory(api)
             self.accounts.append(api.account_name())
 
+        self.build_recipe_info(self.apis[0])
         self.build_item_info(self.apis[0])
         self.build_ecto_price(self.apis[0])
         self.is_ready = True
@@ -60,7 +67,7 @@ class Model(Listener):
         self.items[item_id].add(source)
         self.items[item_id].account_bound = account_bound
 
-    def has_item(self, item_id: int) -> None:
+    def has_item(self, item_id: int) -> bool:
         return item_id in self.items.keys() and self.items[item_id].total_count() > 0
 
     def build_material_storage_size(self, api: GW2Api) -> None:
@@ -109,27 +116,64 @@ class Model(Listener):
             else:
                 self.empty_slots = self.empty_slots + 1
 
+    @staticmethod
+    def build_basic_item_info(item: Item, item_info):
+        item.name = item_info['name']
+        item.icon = item_info['icon']
+        item.rarity = item_info['rarity']
+        item.description = item_info.get('description', None)
+
+        details = item_info.get('details', None)
+        if details:
+            detail_description = details.get('description', None)
+            if detail_description:
+                if not item.description:
+                    item.description = detail_description
+                else:
+                    item.description = item.description + '\n\n' + detail_description
+
+        item.wiki_link = f"https://wiki.guildwars2.com/wiki/{item_info['name'].replace(' ', '_')}"
+
+    def build_recipe_info(self, api: GW2Api) -> None:
+        self.messaging.broadcast("Loading crafting recipes")
+        recipes = api.recipes()
+
+        output_item_ids = []
+
+        for recipe in recipes:
+            if recipe['type'] in ["Refinement", "RefinementEctoplasm", "RefinementObsidian", "IngredientCooking"]:
+                valid = True
+                for ingredient in recipe['ingredients']:
+                    if ingredient['type'] == "Item" and not self.has_item(ingredient['id']):
+                        valid = False
+                        break
+                    if ingredient['type'] == "Item" and self.items[ingredient['id']].total_count() < ingredient[
+                        'count']:
+                        valid = False
+                        break
+                if valid:
+                    self.recipes.append(recipe)
+                    output_item_ids.append(recipe['output_item_id'])
+
+        self.messaging.broadcast("Loading crafted items details")
+
+        self.recipe_results: dict[int, Item] = dict()
+
+        for item_info in api.item_info(frozenset(output_item_ids)):
+            item: Item = Item(item_info['id'])
+
+            self.build_basic_item_info(item, item_info)
+
+            self.recipe_results[item_info['id']] = item
+
     def build_item_info(self, api: GW2Api) -> None:
         appraise_item_ids = []
         self.messaging.broadcast("Loading item details")
+
         for item_info in api.item_info(frozenset(self.items.keys())):
             item: Item = self.items.get(item_info['id'])
 
-            item.name = item_info['name']
-            item.icon = item_info['icon']
-            item.rarity = item_info['rarity']
-            item.description = item_info.get('description', None)
-
-            details = item_info.get('details', None)
-            if details:
-                detail_description = details.get('description', None)
-                if detail_description:
-                    if not item.description:
-                        item.description = detail_description
-                    else:
-                        item.description = item.description + '\n\n' + detail_description
-
-            item.wiki_link = f"https://wiki.guildwars2.com/wiki/{item_info['name'].replace(' ', '_')}"
+            self.build_basic_item_info(item, item_info)
 
             if item_info['type'] not in ['Armor', 'Back', 'Gathering', 'Tool', 'Trinket', 'Weapon', 'Bag', 'Container',
                                          'Gizmo']:
@@ -166,7 +210,7 @@ class Model(Listener):
 
     @lru_cache(maxsize=None)
     def get_advice_stacks(self) -> list[ItemForDisplay]:
-        stack_advice = []
+        stack_advice: list[ItemForDisplay] = []
         for item in filter(lambda list_item: len(list_item.get_advice_stacks(self.material_storage_size)) > 0,
                            self.items.values()):
             stack_advice.append(ItemForDisplay(item, sources=item.get_advice_stacks(self.material_storage_size)))
@@ -174,7 +218,7 @@ class Model(Listener):
 
     @lru_cache(maxsize=None)
     def get_vendor_advice(self) -> list[ItemForDisplay]:
-        junk = []
+        junk: list[ItemForDisplay] = []
         for item in filter(lambda list_item: list_item.rarity == 'Junk', self.items.values()):
             junk.append(ItemForDisplay(item))
         return junk
@@ -196,7 +240,7 @@ class Model(Listener):
 
         luck_items = [45175, 45176, 45177]
 
-        luck_items_advice = []
+        luck_items_advice: list[ItemForDisplay] = []
 
         for luck_item_id in luck_items:
             for account in self.accounts:
@@ -216,7 +260,7 @@ class Model(Listener):
 
     @lru_cache(maxsize=None)
     def get_just_salvage_advice(self) -> list[ItemForDisplay]:
-        just_salvage_advice = []
+        just_salvage_advice: list[ItemForDisplay] = []
 
         exclude = [19721]  # ecto
 
@@ -266,7 +310,7 @@ class Model(Listener):
 
         }
 
-        play_to_consume_advices = []
+        play_to_consume_advices: list[ItemForDisplay] = []
 
         for item_id in gameplay_consumables.keys():
             if self.has_item(item_id):
@@ -288,7 +332,7 @@ class Model(Listener):
             Gobble(83103, 83305, 25),  # Spearmarshall
         ]
 
-        active_gobblers = []
+        active_gobblers: list[ItemForDisplay] = []
 
         for gobble in gobbles:
             if self.has_item(gobble.item_id) and self.has_item(gobble.gobbler_item_id):
@@ -299,19 +343,24 @@ class Model(Listener):
 
         return active_gobblers
 
+    @lru_cache(maxsize=None)
     def get_misc_advice(self) -> list[ItemForDisplay]:
 
         misc = [
             MiscAdvice(43773, 25, "Transform Quartz Crystals into a Charged Quartz Crystal at a place of power."),
-            MiscAdvice(66608, 100, "Sift throught silky sand."),
+            MiscAdvice(66608, 100, "Sift through silky sand."),
             MiscAdvice(48717, 4, "Craft 'Completed Aetherkey'."),
             MiscAdvice(93472, 1, "Consume to get War Supplies"),
             MiscAdvice(93649, 1, "Consume to get War Supplies"),
             MiscAdvice(93455, 1, "Consume to get War Supplies"),
-            MiscAdvice(68531, 1, "Consume to get Mordrem parts"),
+            MiscAdvice(68531, 1, "Consume to get Mordrem parts which can be exchanged for map currency"),
+            MiscAdvice(39752, 250, "Convert to Bauble Bubble"),
+            MiscAdvice(36041, 1000, "Convert to Candy Corn Cob"),
+            MiscAdvice(43319, 1000, "Convert to Jorbreaker"),
+
         ]
 
-        misc_advices = []
+        misc_advices: list[ItemForDisplay] = []
 
         for advice in misc:
             if self.has_item(advice.item_id) and self.items[advice.item_id].total_count() >= advice.min_size:
@@ -319,6 +368,7 @@ class Model(Listener):
 
         return misc_advices
 
+    @lru_cache(maxsize=None)
     def get_karma_consumables_advice(self) -> list[ItemForDisplay]:
 
         karma_item_ids = [86336, 85790, 41740, 38030, 86374, 86181, 36448, 36449, 92714, 95765, 36450, 36451, 41738,
@@ -331,3 +381,87 @@ class Model(Listener):
                 misc_advices.append(ItemForDisplay(self.items[item_id], advice="Consume to get karma."))
 
         return misc_advices
+
+    @lru_cache(maxsize=None)
+    def get_ls3ls4ibs_advice(self) -> list[ItemForDisplay]:
+
+        ls3ls4ibs_advice: list[ItemForDisplay] = []
+
+        ls3_items = [79280, 79469, 79899, 80332, 81127, 81706]
+
+        for ls3_item_id in ls3_items:
+            for account in self.accounts:
+                if self.has_item(ls3_item_id) and self.items[ls3_item_id].total_count(account) > \
+                        self.material_storage_size[account]:
+                    ls3ls4ibs_advice.append(ItemForDisplay(self.items[ls3_item_id],
+                                                           advice='Consume to get Unboud magic',
+                                                           sources=self.items[ls3_item_id].get_sources_for_account(
+                                                               account)))
+
+        ls4_items = [86069, 86977, 87645, 88955, 89537, 90783]
+
+        for ls4_item_id in ls4_items:
+            for account in self.accounts:
+                if self.has_item(ls4_item_id) and self.items[ls4_item_id].total_count(account) > \
+                        self.material_storage_size[account]:
+                    ls3ls4ibs_advice.append(ItemForDisplay(self.items[ls4_item_id],
+                                                           advice='Consume to get Volatile magic',
+                                                           sources=self.items[ls4_item_id].get_sources_for_account(
+                                                               account)))
+
+        eternal_ice_shard_id = 92272
+
+        for account in self.accounts:
+            if self.has_item(eternal_ice_shard_id) and self.items[eternal_ice_shard_id].total_count(account) > \
+                    self.material_storage_size[
+                        account]:
+                ls3ls4ibs_advice.append(ItemForDisplay(self.items[eternal_ice_shard_id],
+                                                       advice='Convert to LS4 currency',
+                                                       sources=self.items[eternal_ice_shard_id].get_sources_for_account(
+                                                           account)))
+
+        return ls3ls4ibs_advice
+
+    @lru_cache(maxsize=None)
+    def get_craft_advice(self) -> list[ItemForDisplay]:
+
+        craft_advice: list[ItemForDisplay] = []
+
+        for recipe in self.recipes:
+            if recipe['output_item_id'] not in self.recipe_results:
+                # recipe has invalid item id output, it was not returned in items, not a valid recipe
+                continue
+
+            has_account_bound_ingredient = False
+
+            for ingredient in recipe['ingredients']:
+                if ingredient['type'] == "Item" and self.items[ingredient['id']].account_bound:
+                    has_account_bound_ingredient = True
+                    break
+
+            if has_account_bound_ingredient:
+                for account in self.accounts:
+                    can_craft = True
+                    has_more_than_stack_ingredient = False
+                    for ingredient in recipe['ingredients']:
+                        if ingredient['type'] == "Item" and self.items[ingredient['id']].total_count(account) < \
+                                ingredient['count']:
+                            can_craft = False
+                        if ingredient['type'] == "Item" and self.items[ingredient['id']].total_count(account) > 250:
+                            has_more_than_stack_ingredient = True
+                    if can_craft and has_more_than_stack_ingredient:
+                        craft_advice.append(
+                            ItemForDisplay(self.recipe_results[recipe['output_item_id']], advice="Craft"))
+            else:
+                can_craft = True
+                has_more_than_stack_ingredient = False
+                for ingredient in recipe['ingredients']:
+                    if ingredient['type'] == "Item" and self.items[ingredient['id']].total_count() < ingredient[
+                        'count']:
+                        can_craft = False
+                    if ingredient['type'] == "Item" and self.items[ingredient['id']].total_count() > 250:
+                        has_more_than_stack_ingredient = True
+                if can_craft and has_more_than_stack_ingredient:
+                    craft_advice.append(ItemForDisplay(self.recipe_results[recipe['output_item_id']], advice="Craft"))
+
+        return craft_advice

@@ -3,6 +3,7 @@ import re
 from nicegui import ui
 from nicegui.elements.input import Input
 
+from log_config import logger
 from reader.gw2api import GW2Api, InvalidAccessToken, MissingPermission
 from ui.ui_model import UiModel, ApiKeyItem
 from ui.unique_label import unique_label_ui
@@ -41,9 +42,11 @@ class ApiKeysManagerUi:
             item.account = api.account_name()
             return item
         except InvalidAccessToken:
+            logger.warning(f"API key {item.api_key} is invalid!")
             ui.notify("API key is invalid!", type='negative')
         except MissingPermission as mp:
-            ui.notify("Missing permission " + mp.permission + " in API key.", type='negative')
+            logger.warning(f"Missing permission {mp.permission} in API key {item.api_key}.")
+            ui.notify(f"Missing permission {mp.permission} in API key.", type='negative')
         item.valid = False
         item.account = None
         return item
