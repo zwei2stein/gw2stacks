@@ -16,6 +16,7 @@ class Advice(Listener):
 
         self.icon: str | None = None
         self.name: str | None = None
+        self.description: str | None = None
 
         self.config()
 
@@ -37,6 +38,8 @@ class Advice(Listener):
     def advice_ui(self) -> None:
         if not self.ui_model.model:
             with ui.expansion(self.name, icon=self.icon).classes('w-full'):
+                if self.description:
+                    ui.label(self.description)
                 ui.skeleton().classes('w-full')
             return
 
@@ -44,6 +47,8 @@ class Advice(Listener):
 
         with (((
         ((ui.expansion(f'{self.name} ({len(advices)})', icon=self.icon, value=len(advices) > 0).classes('w-full')))))):
+            if self.description:
+                ui.label(self.description)
             with ui.grid(columns='auto 2fr auto').classes('w-full'):
                 for item in advices:
                     item_icon_ui(item)

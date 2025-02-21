@@ -6,6 +6,8 @@ from typing import List, Callable
 
 from messaging.messaging import Listener, Messaging
 
+from log_config import logger
+
 SAVED_MODEL_FILE = 'api_keys.json'
 
 
@@ -86,6 +88,7 @@ class UiModel(Listener):
                 file_data = json.dumps(json_data, sort_keys=True, indent=4, ensure_ascii=False)
                 out_file.write(file_data)
         except Exception as ex:
+            logger.error(f'Key was added, but configuration file {SAVED_MODEL_FILE} was not saved, error: ({ex})')
             self.model_messaging.broadcast(
                 f'Key was added, but configuration file {SAVED_MODEL_FILE} was not saved, error: ({ex})')
 

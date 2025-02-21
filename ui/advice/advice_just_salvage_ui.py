@@ -14,3 +14,4 @@ class AdviceJustSalvageUi(Advice):
     def config(self):
         self.icon = 'home_repair_service'
         self.name = 'Salvage items'
+        self.description = 'Items that have no other use than to be salvaged with salvage kits.'

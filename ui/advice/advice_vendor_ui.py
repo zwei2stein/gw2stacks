@@ -14,3 +14,4 @@ class AdviceVendorUi(Advice):
     def config(self):
         self.icon = 'storefront'
         self.name = 'Sell to vendors'
+        self.description = 'Items that have no other use than being sold to vendors for gold.'

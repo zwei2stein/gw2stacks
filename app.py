@@ -6,13 +6,17 @@ from nicegui.events import ClickEventArguments
 
 import version
 from data.model import Model
+from log_config import logger
 from messaging.console_print_listener import ConsolePrintListener
+from messaging.infolog_listener import InfoLogListener
 from messaging.ui_notify_listener import QueueListener
 from reader.gw2api import GW2Api, InvalidAccessToken, MissingPermission, UserAborted
+from ui.advice.advice_craft_ui import AdviceCraftUi
 from ui.advice.advice_gobble_ui import AdviceGobbleUi
 from ui.advice.advice_just_delete_ui import AdviceJustDeleteUi
 from ui.advice.advice_just_salvage_ui import AdviceJustSalvageUi
 from ui.advice.advice_karma_consumables_ui import AdviceKarmaConsumablesUi
+from ui.advice.advice_ls3ls4ibs_ui import AdviceLS3LS4IBSUi
 from ui.advice.advice_luck_craft_ui import AdviceLuckCraftUi
 from ui.advice.advice_misc_ui import AdviceMiscUi
 from ui.advice.advice_play_to_consume_ui import AdvicePlayToConsumeUi
@@ -50,15 +54,20 @@ async def start_advice(arg: ClickEventArguments) -> None:
                         api_keys.append(GW2Api(item.api_key))
                 ui_model.model = Model(api_keys, ui_model.model_messaging)
                 ui.notify("Starting to load account data.", type='positive')
+                logger.info("Starting to load account data.")
                 ui_model.abort_button.set_visibility(True)
                 await run.io_bound(ui_model.model.init_from_api)
                 ui.notify("Account data loaded.", type='positive')
-        except InvalidAccessToken:
+                logger.info("Account data loaded.")
+        except InvalidAccessToken as iat:
             ui.notify("API key is invalid!", type='negative')
+            logger.warning(f"Invalid api key {iat.api_key}")
         except MissingPermission as mp:
-            ui.notify("Missing permission " + mp.permission + " in API key.", type='negative')
+            ui.notify(f"Missing permission {mp.permission} in API key.", type='negative')
+            logger.warning(f"Missing permission {mp.permission} in api key {mp.api_key}")
         except UserAborted:
             ui.notify("Aborted by user", type='negative')
+            logger.info("User aborted a data load")
         # except Exception as e:
         #    ui.notify("Error: " + str(e), type='negative')
     ui_model.refresh_ui()
@@ -73,7 +82,7 @@ def notify_from_queue(queue: Queue) -> None:
 
 @ui.page('/')
 def index() -> None:
-    ui.page_title('GW2 inventory cleanup tool')
+    ui.page_title(f'GW2 inventory cleanup tool, v{version.app_version}')
 
     ui.add_head_html(
         '<link type="text/css" rel="stylesheet" href="https://d1h9a8s8eodvjz.cloudfront.net/fonts/menomonia/08-02-12/menomonia.css" />')
@@ -103,6 +112,7 @@ def index() -> None:
     ApiKeysManagerUi(ui_model)
 
     AdviceStacksUi(ui_model)
+    AdviceCraftUi(ui_model)
     AdviceGobbleUi(ui_model)
     AdviceVendorUi(ui_model)
     AdviceRareSalvageUi(ui_model)
@@ -110,6 +120,7 @@ def index() -> None:
     AdviceLuckCraftUi(ui_model)
     AdviceKarmaConsumablesUi(ui_model)
     AdvicePlayToConsumeUi(ui_model)
+    AdviceLS3LS4IBSUi(ui_model)
     AdviceJustDeleteUi(ui_model)
     AdviceMiscUi(ui_model)
 
@@ -124,9 +135,12 @@ def index() -> None:
 
 
 if __name__ in {"__main__", "__mp_main__"}:
+    logger.info(f'Starting GW2 inventory cleanup tool, v{version.app_version}')
+
     ui_model = UiModel()
     ui_model.model_messaging.add_listener(QueueListener(ui_model.queue))
     ui_model.model_messaging.add_listener(ConsolePrintListener())
+    ui_model.model_messaging.add_listener(InfoLogListener())
     ui_model.restore()
 
     index()
@@ -134,3 +148,5 @@ if __name__ in {"__main__", "__mp_main__"}:
     ##ui.run()
 
     ui.run(native=True, fullscreen=False, reload=False)
+
+    logger.info('Ready')

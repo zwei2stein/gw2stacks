@@ -14,3 +14,4 @@ class AdviceGobbleUi(Advice):
     def config(self):
         self.icon = 'restaurant'
         self.name = 'Gobble'
+        self.description = 'These items can be consumed by gobblers to gain loot. While they have other uses (notably when crafting ascended items), they are plentiful.'

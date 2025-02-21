@@ -14,3 +14,4 @@ class AdvicePlayToConsumeUi(Advice):
     def config(self):
         self.icon = 'hiking'
         self.name = 'Use up by playing the game'
+        self.description = 'Items used up by playing the game, requires doing specific content and has no other use outside that.'
