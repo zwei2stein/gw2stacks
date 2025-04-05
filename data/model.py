@@ -121,16 +121,16 @@ class Model(Listener):
         item.name = item_info['name']
         item.icon = item_info['icon']
         item.rarity = item_info['rarity']
-        item.description = item_info.get('description', None)
+
+        description_lines : list[str] = list()
+
+        description_lines.append(item_info.get('description', None))
 
         details = item_info.get('details', None)
         if details:
-            detail_description = details.get('description', None)
-            if detail_description:
-                if not item.description:
-                    item.description = detail_description
-                else:
-                    item.description = item.description + '\n\n' + detail_description
+            description_lines.append(details.get('description', None))
+
+        item.description = '\n\n'.join(filter(None, description_lines))
 
         item.wiki_link = f"https://wiki.guildwars2.com/wiki/{item_info['name'].replace(' ', '_')}"
 
@@ -185,11 +185,12 @@ class Model(Listener):
             if 'SoulbindOnAcquire' in item_info['flags']:
                 item.stackable = False
 
-            if 'This item only has value as part of a collection.' == item_info.get("description", None):
+            if 'This item only has value as part of a collection.' == item_info.get("description", None) \
+                    or item_info['id'] in [96240]:
                 item.deletable = True
 
             if item_info['type'] in ['Armor', 'Back', 'Trinket', 'Weapon'] and item_info['rarity'] == 'Rare' and \
-                    item_info['level'] > 77 and 'NoSalvage' not in item_info['flags']:
+                    item_info['level'] > 77 and 'NoSalvage' not in item_info['flags'] and 'AccountBound' not in item_info['flags']:
                 item.rare_for_salvage = True
                 appraise_item_ids.append(item.item_id)
 
